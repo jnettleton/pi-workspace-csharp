@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/bin/Debug/net6.0/MyFirstApp.dll",
+            "program": "${workspaceFolder}/bin/Debug/net6.0/OledI2cDemo.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
@@ -28,7 +28,7 @@
             "request": "launch",
             "preLaunchTask": "RaspberryPiDeploy",
             "program": "dotnet",
-            "args": ["/home/pi/${workspaceFolderBasename}/${workspaceFolderBasename}.dll"],
+            "args": ["/home/pi/${workspaceFolderBasename}/OledI2cDemo.dll"],
             "cwd": "/home/pi/${workspaceFolderBasename}",
             "stopAtEntry": false,
             "console": "internalConsole",

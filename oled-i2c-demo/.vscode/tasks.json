@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/MyFirstApp.csproj",
+                "${workspaceFolder}/OledI2cDemo.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/MyFirstApp.csproj",
+                "${workspaceFolder}/OledI2cDemo.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -33,7 +33,7 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/MyFirstApp.csproj"
+                "${workspaceFolder}/OledI2cDemo.csproj"
             ],
             "problemMatcher": "$msCompile"
         },
@@ -46,7 +46,7 @@
                 "command": "cmd",
                 "args": [
                     "/c",
-                    "\"dotnet publish -r linux-arm -o bin\\linux-arm\\publish --no-self-contained\""
+                    "\"dotnet publish -r linux-arm64 -o bin\\linux-arm64\\publish --no-self-contained\""
                 ],
                 "problemMatcher": []
             }
@@ -61,7 +61,7 @@
                 "panel": "new"
             },
             "windows": {
-                "command": "copy bin\\linux-arm\\publish\\ -Destination P:${workspaceFolderBasename} -Recurse -Container:$false"
+                "command": "copy bin\\linux-arm64\\publish\\ -Destination P:${workspaceFolderBasename} -Recurse -Container:$false"
             },
             "problemMatcher": []
         }
