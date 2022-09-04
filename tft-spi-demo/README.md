@@ -1,5 +1,4 @@
 ﻿
 Run .Net 6.0 C# on Raspberry Pi (arm64)
 
-0.91 Inch I2C SSD1306 OLED Display Module
-https://www.amazon.com/dp/B08JPYJ35Y
+WAVESHARE 3.5 inch 320x480 Touch Screen TFT LCD for Raspberry Pi](https://www.sunsky-online.com/p/DIY1200/WAVESHARE-3.5-inch-320x480-Touch-Screen-TFT-LCD-for-Raspberry-Pi.htm)
