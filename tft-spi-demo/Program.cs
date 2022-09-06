@@ -11,7 +11,7 @@ namespace OledI2cDemo
         {
             var display = new RpiTftDisplay();
             display.initialize();
-            display.fill_screen(ST7735Color.RED);
+            display.fill_screen(ST7735Color.BLUE);
         }
     }
 }

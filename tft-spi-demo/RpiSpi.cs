@@ -7,15 +7,19 @@ namespace TftSpiDemo
     {
         private SpiDevice spi_device;
         private bool command;
-        private GpioController tft_dc_gpio25;
+        private GpioController tft_dc_gpio24; // command = Low, data = High
 
         public RpiSpi()
         {
             // busId 0, chipSelectLine 8
-            spi_device = SpiDevice.Create(new SpiConnectionSettings(0, 0));
+            var spi_settings = new SpiConnectionSettings(0, 0) {
+                ClockFrequency = 500000,
+                Mode = SpiMode.Mode0,
+            };
+            spi_device = SpiDevice.Create(spi_settings);
 
-            tft_dc_gpio25 = new GpioController();
-            tft_dc_gpio25.OpenPin(25, PinMode.Output);
+            tft_dc_gpio24 = new GpioController();
+            tft_dc_gpio24.OpenPin(24, PinMode.Output);
         }
 
         public void write_reg(ST7735Command cmd, byte data)
@@ -61,7 +65,7 @@ namespace TftSpiDemo
         private void dc_set_low()
         {
             if (!command) {
-                tft_dc_gpio25.Write(25, PinValue.Low);
+                tft_dc_gpio24.Write(24, PinValue.Low);
                 command = true;
             }
         }
@@ -69,7 +73,7 @@ namespace TftSpiDemo
         private void dc_set_high()
         {
             if (command) {
-                tft_dc_gpio25.Write(25, PinValue.High);
+                tft_dc_gpio24.Write(24, PinValue.High);
                 command = false;
             }
         }

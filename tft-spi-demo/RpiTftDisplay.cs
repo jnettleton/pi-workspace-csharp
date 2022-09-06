@@ -112,17 +112,15 @@ namespace TftSpiDemo
         ushort tft_start_width;
         ushort tft_start_height;
 
-        GpioController tft_rst;
+        GpioController tft_rst_gpio25;
 
-        //// tft_buffer: vec!<u8>(),
         ST7735Color txt_color;
         ST7735Color txt_bg_color;
 
         public RpiTftDisplay()
         {
             //    pub fn new () -> Self {
-            rpi_spi = new RpiSpi();
-            //let gpio25 = Gpio::new ().unwrap().get(25).unwrap().into_output();
+            rpi_spi = new RpiSpi(); // chip select gpio8 (CE0)
 
             mode = TFTMode.DISPLAYOFF;
             pcb_type = TFTPcbType.None;
@@ -137,8 +135,8 @@ namespace TftSpiDemo
             tft_start_height = tft_height;
             tft_start_width = tft_width;
 
-            tft_rst = new GpioController();
-            tft_rst.OpenPin(25, PinMode.Output);
+            tft_rst_gpio25 = new GpioController();
+            tft_rst_gpio25.OpenPin(25, PinMode.Output);
 
             // tft_buffer: [],
             txt_color = ST7735Color.WHITE;
@@ -172,38 +170,19 @@ namespace TftSpiDemo
             var hi = (byte) ((ushort) color >> 8);
             var lo = (byte) color;
 
-#if true
             set_addr_window(x, y, (ushort)(x + w - 1), (ushort)(y + h - 1));
             rpi_spi.write_command_delay(ST7735Command.RAMWR, 0);
-            // var buffer = new byte[] { hi, lo };
+
             var data = new List<byte>();
-            for (var i = 0; i < h; i++) {
-                for (var j = 0; j < w; j++) {
-                    // rpi_spi.write_data_delay(hi, 0);
-                    // rpi_spi.write_data_delay(lo, 0);
-
-                    // rpi_spi.write_data_delay(buffer, 0);
-
-                    data.Add(hi);
-                    data.Add(lo);
-                }
-
-                rpi_spi.write_data_delay(data.ToArray(), 0);
-                data.Clear();
+            for (var j = 0; j < w; j++) {
+                data.Add(hi);
+                data.Add(lo);
             }
-#else
-            var data = new List<byte>();
-            for (var i = 0; i < h; i++) {
-                for (var j = 0; j < w; j++) {
-                    data.Add(hi);
-                    data.Add(lo);
-                }
-            }
+            var buffer = data.ToArray();
 
-            set_addr_window(x, y, (ushort)(x + w - 1), (ushort)(y + h - 1));
-            rpi_spi.write_command_delay(ST7735Command.RAMWR, 0);
-            rpi_spi.write_data_delay(data.ToArray(), 0);
-#endif
+            for (var i = 0; i < h; i++) {
+                rpi_spi.write_data_delay(buffer, 0);
+            }
         }
 
         public void set_addr_window(ushort x0, ushort y0, ushort x1, ushort y1)
@@ -312,11 +291,11 @@ namespace TftSpiDemo
 
         private void reset_pin()
         {
-            tft_rst.Write(25, PinValue.High);
+            tft_rst_gpio25.Write(25, PinValue.High);
             Thread.Sleep(10);
-            tft_rst.Write(25, PinValue.Low);
+            tft_rst_gpio25.Write(25, PinValue.Low);
             Thread.Sleep(10);
-            tft_rst.Write(25, PinValue.High);
+            tft_rst_gpio25.Write(25, PinValue.High);
             Thread.Sleep(10);
         }
     }
