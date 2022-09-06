@@ -11,9 +11,9 @@ namespace TftSpiDemo
 
         public RpiSpi()
         {
-            // busId 0, chipSelectLine 8
+            // busId 0, chipSelectLine 0 (CE0, GPIO8)
             var spi_settings = new SpiConnectionSettings(0, 0) {
-                ClockFrequency = 500000,
+                ClockFrequency = 26000000, // max 26 MHz
                 Mode = SpiMode.Mode0,
             };
             spi_device = SpiDevice.Create(spi_settings);
