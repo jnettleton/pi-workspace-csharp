@@ -6,20 +6,26 @@ namespace TftSpiDemo
     public class RpiSpi
     {
         private SpiDevice spi_device;
+        private byte dc_pin;
         private bool command;
-        private GpioController tft_dc_gpio24; // command = Low, data = High
+        private GpioController tft_dc; // command = Low, data = High
 
-        public RpiSpi()
+        public RpiSpi(byte dc)
         {
+            dc_pin = dc;
+
             // busId 0, chipSelectLine 0 (CE0, GPIO8)
             var spi_settings = new SpiConnectionSettings(0, 0) {
-                ClockFrequency = 26000000, // max 26 MHz
+                ClockFrequency = 31200000, //500000, // 26000000, // max 26 MHz
+                DataBitLength = 8,
                 Mode = SpiMode.Mode0,
             };
             spi_device = SpiDevice.Create(spi_settings);
 
-            tft_dc_gpio24 = new GpioController();
-            tft_dc_gpio24.OpenPin(24, PinMode.Output);
+            tft_dc = new GpioController();
+            tft_dc.OpenPin(24, PinMode.Output);
+            tft_dc.Write(dc_pin, PinValue.Low);
+            command = true;
         }
 
         public void write_reg(ST7735Command cmd, byte data)
@@ -31,7 +37,7 @@ namespace TftSpiDemo
             spi_device.WriteByte(data);
         }
 
-        public void write_command_delay(ST7735Command cmd, int delay)
+        public void write_command(ST7735Command cmd, int delay = 0)
         {
             dc_set_low();
             spi_device.WriteByte((byte) cmd);
@@ -41,7 +47,7 @@ namespace TftSpiDemo
             }
         }
 
-        public void write_data_delay(byte data, int delay)
+        public void write_data(byte data, int delay = 0)
         {
             dc_set_high();
             spi_device.WriteByte(data);
@@ -51,30 +57,46 @@ namespace TftSpiDemo
             }
         }
 
-        public void write_data_delay(byte[] data, int delay)
+        public void write_data(byte[] data, int delay = 0)
         {
-            var span = new ReadOnlySpan<byte>(data);
             dc_set_high();
-            spi_device.Write(span);
+            if (data.Length <= 32)
+            {
+                for (var i = 0; i < data.Length; i++)
+                {
+                    spi_device.WriteByte(data[i]);
+                }
+            } else {
+                var span = new ReadOnlySpan<byte>(data);
+                spi_device.Write(span);
+            }
 
             if (delay != 0) {
                 Thread.Sleep(delay);
             }
         }
 
-        private void dc_set_low()
+        private void dc_set_low(int delay = 0)
         {
-            if (!command) {
-                tft_dc_gpio24.Write(24, PinValue.Low);
+            if (!command)
+            {
+                tft_dc.Write(dc_pin, PinValue.Low);
                 command = true;
+                if (delay != 0) {
+                    Thread.Sleep(delay);
+                }
             }
         }
 
-        private void dc_set_high()
+        private void dc_set_high(int delay = 0)
         {
-            if (command) {
-                tft_dc_gpio24.Write(24, PinValue.High);
+            if (command)
+            {
+                tft_dc.Write(dc_pin, PinValue.High);
                 command = false;
+                if (delay != 0) {
+                    Thread.Sleep(delay);
+                }
             }
         }
     }
