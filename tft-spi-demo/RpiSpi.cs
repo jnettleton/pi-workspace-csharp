@@ -57,6 +57,27 @@ namespace TftSpiDemo
             }
         }
 
+        public void write_data_length(byte[] data, int length, int delay = 0)
+        {
+            dc_set_high();
+            if (length > data.Length) return;
+
+            if (length <= 32)
+            {
+                for (var i = 0; i < length; i++)
+                {
+                    spi_device.WriteByte(data[i]);
+                }
+            } else {
+                var span = new ReadOnlySpan<byte>(data, 0, length);
+                spi_device.Write(span);
+            }
+
+            if (delay != 0) {
+                Thread.Sleep(delay);
+            }
+        }
+
         public void write_data(byte[] data, int delay = 0)
         {
             dc_set_high();

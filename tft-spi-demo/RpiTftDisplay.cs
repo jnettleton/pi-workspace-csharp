@@ -1,4 +1,6 @@
-﻿using System.Device.Gpio;
+﻿//#define ENABLE_COLOR18
+
+using System.Device.Gpio;
 
 namespace TftSpiDemo
 {
@@ -125,6 +127,22 @@ namespace TftSpiDemo
         MADCTL_MH = 0x04
     }
 
+#if ENABLE_COLOR18
+    public enum ST7735Color18 : UInt32
+    {
+        BLACK = 0x000000,
+        BLUE = 0x0000FC,
+        RED = 0xFC0000,
+        GREEN = 0x00FC00,
+        CYAN = 0x00FCFC, // 00, 3F, 1F
+        MAGENTA = 0xFC00FC, // 1F, 00, 1F
+        YELLOW = 0xFCF800, // 1F, 3E, 00
+        WHITE = 0xFFFFFF,
+        TAN = 0x344044, // 1D, 10, 11
+        GREY = 0x4C9844, // 13, 26, 11
+        BROWN = 0x604004 // 18, 10, 01
+    }
+#else    
     public enum ST7735Color : ushort
     {
         BLACK = 0x0000,
@@ -139,6 +157,7 @@ namespace TftSpiDemo
         GREY = 0x9CD1,
         BROWN = 0x6201
     }
+#endif
 
     public enum TFTMode
     {
@@ -190,9 +209,13 @@ namespace TftSpiDemo
         GpioController tft_rst_gpio25;
 
         TFTRotate tft_rotation;
+#if ENABLE_COLOR18
+        ST7735Color18 txt_color;
+        ST7735Color18 txt_bg_color;
+#else
         ST7735Color txt_color;
         ST7735Color txt_bg_color;
-
+#endif
         byte[] font = new byte[] {
             0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x5F, 0x00, 0x00,
@@ -317,8 +340,13 @@ namespace TftSpiDemo
             tft_rst_gpio25.OpenPin(25, PinMode.Output);
 
             // tft_buffer: [],
+#if ENABLE_COLOR18
+            txt_color = ST7735Color18.WHITE;
+            txt_bg_color = ST7735Color18.BLACK;
+#else
             txt_color = ST7735Color.WHITE;
             txt_bg_color = ST7735Color.BLACK;
+#endif
         }
 
         public void init_screen_size(ushort x_offset, ushort y_offset, ushort width, ushort height)
@@ -399,24 +427,45 @@ namespace TftSpiDemo
             rpi_spi.write_data(madctrl);
         }
 
+#if ENABLE_COLOR18
+        public void fill_screen(ST7735Color18 color)
+#else
         public void fill_screen(ST7735Color color)
+#endif
         {
             fill_rectangle(0, 0, tft_width, tft_height, color);
         }
 
+#if ENABLE_COLOR18
+        public void fill_rectangle(ushort x, ushort y, ushort w, ushort h, ST7735Color18 color)
+#else
         public void fill_rectangle(ushort x, ushort y, ushort w, ushort h, ST7735Color color)
+#endif
         {
             if (x >= tft_width || y >= tft_height) { return; };
             if ((x + w) >= tft_width) { w = (ushort) (tft_width - x); }
             if ((y + h) >= tft_height) { h = (ushort) (tft_height - y); }
-            var hi = (byte) ((ushort) color >> 8);
-            var lo = (byte) color;
 
             var data = new List<byte>();
+#if ENABLE_COLOR18
+            var hi = (byte) (((UInt32) color >> 16) & 0xFC);
+            var md = (byte) (((UInt32) color >> 8) & 0xFC);
+            var lo = (byte) ((byte) color & 0xFC);
+
+            for (var j = w; j > 0; j--) {
+                data.Add(hi);
+                data.Add(md);
+                data.Add(lo);
+            }
+#else
+            var hi = (byte) (((ushort) color >> 8) & 0xFF);
+            var lo = (byte) ((ushort) color & 0xFF);
+
             for (var j = w; j > 0; j--) {
                 data.Add(hi);
                 data.Add(lo);
             }
+#endif
             var buffer = data.ToArray();
 
             set_addr_window(x, y, w, h);
@@ -428,41 +477,59 @@ namespace TftSpiDemo
         public void set_addr_window(ushort x, ushort y, ushort w, ushort h)
         {
             var xs = x + x_start;
-            var xe = x + x_start + w - 1;
+            var xe = x + x_start + w;
             rpi_spi.write_command(ST7735Command.CASET);
             rpi_spi.write_data(new byte[] { (byte)(xs >> 8), (byte)(xs & 0xFF), (byte)(xe >> 8), (byte)(xe & 0xFF) });
 
             var ys = y + y_start;
-            var ye = y + y_start + h - 1;
+            var ye = y + y_start + h;
             rpi_spi.write_command(ST7735Command.RASET);
             rpi_spi.write_data(new byte[] { (byte)(ys >> 8), (byte)(ys & 0xFF), (byte)(ye >> 8), (byte)(ye & 0xFF) });
 
             rpi_spi.write_command(ST7735Command.RAMWR);
         }
 
+#if ENABLE_COLOR18
+        public void draw_pixel(ushort x, ushort y, ST7735Color18 color)
+#else
         public void draw_pixel(ushort x, ushort y, ST7735Color color)
+#endif
         {
             if (x >= tft_width || y >= tft_height) return;
+#if ENABLE_COLOR18
+            var hi = (byte) (((UInt32) color >> 16) & 0xFC);
+            var md = (byte) (((UInt32) color >> 8) & 0xFC);
+            var lo = (byte) ((byte) color & 0xFC);
+
+            set_addr_window(x, y, 1, 1);
+            rpi_spi.write_data(new byte[] { hi, md, lo });
+#else
             var hi = (byte) ((ushort) color >> 8);
             var lo = (byte) color;
 
             set_addr_window(x, y, 1, 1);
             rpi_spi.write_data(new byte[] { hi, lo });
+#endif
+
         }
 
+#if ENABLE_COLOR18
+        public void draw_char(ushort x, ushort y, byte c, ST7735Color18 color, ST7735Color18 bg, byte size)
+#else
         public void draw_char(ushort x, ushort y, byte c, ST7735Color color, ST7735Color bg, byte size)
+#endif
         {
-            if (x >= tft_width || y >= tft_height) return;
+            if (x >= tft_width || y >= tft_height || (x + 6 * size - 1) < 0 || (y + 8 * size - 1) < 0) return;
             if (size < 1) size = 1;
             if (c < ' ' || c > '~') c = (byte)'?';
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++) // char - 5 columns
             {
                 byte line;
                 if (c < 'S') line = font[(c - 32) * 5 + i];
                 else line = font2[(c - 'S') * 5 + i];
 
-                for (int j = 0; j < 8; j++, line >>= 1)
+                for (int j = 0; j < 7; j++, line >>= 1) // char - 8 rows
                 {
                     if ((line & 0x01) != 0)
                     {
@@ -476,6 +543,13 @@ namespace TftSpiDemo
                     }
                 }
             }
+            if (bg != color)
+            {
+                if (size != 1)
+                {
+                    fill_rectangle((ushort)(x + 5 * size), y, size, (ushort)(8 * size), bg);
+                }
+            }
         }
 
         int wrap = 1;
@@ -484,7 +558,11 @@ namespace TftSpiDemo
             wrap = w;
         }
 
+#if ENABLE_COLOR18
+        public void draw_text(ushort x, ushort y, string text, ST7735Color18 color, ST7735Color18 bg, byte size)
+#else
         public void draw_text(ushort x, ushort y, string text, ST7735Color color, ST7735Color bg, byte size)
+#endif
         {
             ushort cursor_x = x, cursor_y = y;
             int textsize = text.Length;
@@ -505,6 +583,42 @@ namespace TftSpiDemo
             }
             
         }
+
+        const int TX_RX_BUF_LENGTH = 3 * 1024;
+        public void draw_bitmap(ushort x_pos, ushort y_pos, ushort bitmap_width, ushort bitmap_height, byte[] image)
+        {
+            var i = 0; //bitmap_width * (bitmap_height - 1);
+
+            set_addr_window(x_pos, y_pos, bitmap_width, bitmap_height);
+            var buffer = new byte[TX_RX_BUF_LENGTH];
+            var count = 0;
+            for (var y = 0; y < bitmap_height; y++)
+            {
+                for (var x = 0; x < bitmap_width; x++)
+                {
+                    if (count == TX_RX_BUF_LENGTH)
+                    {
+                        rpi_spi.write_data_length(buffer, count);
+                        count = 0;
+                    }
+#if ENABLE_COLOR18
+                    buffer[count++] = image[i + 2];     // blue
+                    buffer[count++] = image[i + 1]; // green
+                    buffer[count++] = image[i]; // red
+                    i += 3;
+#else
+                    buffer[count++] = image[i + 1];
+                    buffer[count++] = image[i];
+                    i += 2;
+#endif
+                }
+            }
+            if (count != 0)
+            {
+                rpi_spi.write_data(buffer, count);
+            }
+        }
+
         public void set_cursor()
         {
         }
@@ -534,7 +648,11 @@ namespace TftSpiDemo
             
             rpi_spi.write_command(ST7735Command.SLPOUT, 250);
 
+#if ENABLE_COLOR18
+            rpi_spi.write_reg(ST7735Command.COLMOD, 0x66);
+#else
             rpi_spi.write_reg(ST7735Command.COLMOD, 0x55);
+#endif
 
             rpi_spi.write_reg(ST7735Command.PWCTR3, 0x44);
 
