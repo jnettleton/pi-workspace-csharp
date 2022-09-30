@@ -452,7 +452,7 @@ namespace TftSpiDemo
             var md = (byte) (((UInt32) color >> 8) & 0xFC);
             var lo = (byte) ((byte) color & 0xFC);
 
-            for (var j = w; j > 0; j--) {
+            for (var j = 0; j < w; j++) {
                 data.Add(hi);
                 data.Add(md);
                 data.Add(lo);
@@ -461,7 +461,7 @@ namespace TftSpiDemo
             var hi = (byte) (((ushort) color >> 8) & 0xFF);
             var lo = (byte) ((ushort) color & 0xFF);
 
-            for (var j = w; j > 0; j--) {
+            for (var j = 0; j < w; j++) {
                 data.Add(hi);
                 data.Add(lo);
             }
@@ -469,7 +469,7 @@ namespace TftSpiDemo
             var buffer = data.ToArray();
 
             set_addr_window(x, y, w, h);
-            for (var i = h; i > 0; i--) {
+            for (var i = 0; i < h; i++) {
                 rpi_spi.write_data(buffer);
             }
         }
@@ -504,8 +504,8 @@ namespace TftSpiDemo
             set_addr_window(x, y, 1, 1);
             rpi_spi.write_data(new byte[] { hi, md, lo });
 #else
-            var hi = (byte) ((ushort) color >> 8);
-            var lo = (byte) color;
+            var hi = (byte) (((ushort) color >> 8) & 0xFF);
+            var lo = (byte) ((ushort) color & 0xFF);
 
             set_addr_window(x, y, 1, 1);
             rpi_spi.write_data(new byte[] { hi, lo });
@@ -523,32 +523,32 @@ namespace TftSpiDemo
             if (size < 1) size = 1;
             if (c < ' ' || c > '~') c = (byte)'?';
 
+            // fill_rectangle(x, y, (ushort)(5 * size), (ushort)(7 * size), bg);
+
             for (int i = 0; i < 5; i++) // char - 5 columns
             {
                 byte line;
                 if (c < 'S') line = font[(c - 32) * 5 + i];
                 else line = font2[(c - 'S') * 5 + i];
 
-                for (int j = 0; j < 7; j++, line >>= 1) // char - 8 rows
+                for (int j = 0; j < 7; j++, line >>= 1) // char - 7 rows
                 {
                     if ((line & 0x01) != 0)
                     {
                         if (size == 1) draw_pixel((ushort)(x + i), (ushort)(y + j), color);
                         else fill_rectangle((ushort)(x + (i * size)), (ushort)(y + (j * size)), size, size, color);
                     }
-                    else if (bg != color)
+                    else //if (bg != color)
                     {
                         if (size == 1) draw_pixel((ushort)(x + i), (ushort)(y + j), bg);
                         else fill_rectangle((ushort)(x + i * size), (ushort)(y + j * size), size, size, bg);
                     }
                 }
             }
-            if (bg != color)
+            //if (bg != color)
             {
-                if (size != 1)
-                {
-                    fill_rectangle((ushort)(x + 5 * size), y, size, (ushort)(8 * size), bg);
-                }
+                // 6th column (space between chars)
+                fill_rectangle((ushort)(x + 5 * size), y, size, (ushort)(7 * size), bg);
             }
         }
 
