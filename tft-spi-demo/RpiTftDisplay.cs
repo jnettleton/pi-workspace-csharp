@@ -187,9 +187,6 @@ namespace TftSpiDemo
 
     public class RpiTftDisplay
     {
-        const byte TFT_DC = 24;
-        const byte TFT_RST = 25;
-
         RpiSpi rpi_spi;
         TFTMode mode;
         TFTPcbType pcb_type;
@@ -205,8 +202,6 @@ namespace TftSpiDemo
         ushort tft_start_height;
         ushort start_column;
         ushort start_row;
-
-        GpioController tft_rst_gpio25;
 
         TFTRotate tft_rotation;
 #if ENABLE_COLOR18
@@ -316,10 +311,9 @@ namespace TftSpiDemo
             0x02, 0x01, 0x02, 0x04, 0x02
         };
 
-        public RpiTftDisplay()
+        public RpiTftDisplay(RpiSpi spi)
         {
-            //    pub fn new () -> Self {
-            rpi_spi = new RpiSpi(TFT_DC); // chip select gpio8 (CE0)
+            rpi_spi = spi;
 
             mode = TFTMode.DISPLAYOFF;
             pcb_type = TFTPcbType.None;
@@ -336,9 +330,6 @@ namespace TftSpiDemo
             tft_start_height = tft_height;
             tft_start_width = tft_width;
 
-            tft_rst_gpio25 = new GpioController();
-            tft_rst_gpio25.OpenPin(25, PinMode.Output);
-
             // tft_buffer: [],
 #if ENABLE_COLOR18
             txt_color = ST7735Color18.WHITE;
@@ -347,6 +338,11 @@ namespace TftSpiDemo
             txt_color = ST7735Color.WHITE;
             txt_bg_color = ST7735Color.BLACK;
 #endif
+        }
+
+        public void select()
+        {
+            rpi_spi.select_display();
         }
 
         public void init_screen_size(ushort x_offset, ushort y_offset, ushort width, ushort height)
@@ -665,7 +661,7 @@ namespace TftSpiDemo
             // https://github.com/gavinlyonsrepo/ST7735_TFT_RPI/blob/main/src/ST7735_TFT.cpp
             // https://github.com/maudeve-it/ST7735S-STM32/blob/main/SOURCE/z_displ_ST7735.c
 
-            reset_pin();
+            select();
             init_ili9486();
             // set_addr_window(0, 0, 320, 480);
 
@@ -779,16 +775,6 @@ namespace TftSpiDemo
 
             rpi_spi.write_command(ST7735Command.NORON, 10);
             rpi_spi.write_command(ST7735Command.DISPON, 100);
-        }
-
-        private void reset_pin()
-        {
-            tft_rst_gpio25.Write(TFT_RST, PinValue.High);
-            Thread.Sleep(1);
-            tft_rst_gpio25.Write(TFT_RST, PinValue.Low);
-            Thread.Sleep(1);
-            tft_rst_gpio25.Write(TFT_RST, PinValue.High);
-            Thread.Sleep(120);
         }
     }
 }

@@ -11,7 +11,13 @@ namespace OledI2cDemo
         // };
         static void Main(string[] args)
         {
-            var display = new RpiTftDisplay();
+            var spi = new RpiSpi();
+            spi.reset();
+
+            var touch = new RpiTftTouch(spi);
+            touch.initialize();
+
+            var display = new RpiTftDisplay(spi);
             display.initialize();
 
             display.init_screen_size(0, 0, 320, 480);
@@ -55,6 +61,12 @@ namespace OledI2cDemo
 #endif
 
             display.draw_bitmap(0, 4, 32, 32, Images.PI);
+
+            while (true) {
+                spi.select_touch();
+                var buffer = spi.read_data();
+                Thread.Sleep(1000);
+            }
         }
     }
 }

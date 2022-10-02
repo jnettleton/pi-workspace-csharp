@@ -7,16 +7,21 @@ namespace TftSpiDemo
     {
         // const int TFT_CD_DELAY = 0;
         const int TFT_MAX_BYTES = 8; //4 * 1024;
-        
+        const int TFT_RST = 25;
+        const int TFT_DC = 24;
+        const int TFT_CS_DISPLAY = 8;
+        const int TFT_CS_TOUCH = 7;
+
         private SpiDevice spi_device;
-        private byte dc_pin;
         private bool command;
+        private bool display;
+        private GpioController tft_rst; // command = Low, data = High
         private GpioController tft_dc; // command = Low, data = High
+        private GpioController tft_cs_display; // command = Low, data = High
+        private GpioController tft_cs_touch; // command = Low, data = High
 
-        public RpiSpi(byte dc)
+        public RpiSpi()
         {
-            dc_pin = dc;
-
             // busId 0, chipSelectLine 0 (CE0, GPIO8)
             var spi_settings = new SpiConnectionSettings(0, 0) {
                 ClockFrequency = 31200000, //500000, // 26000000, // max 26 MHz
@@ -25,10 +30,23 @@ namespace TftSpiDemo
             };
             spi_device = SpiDevice.Create(spi_settings);
 
+            tft_rst = new GpioController();
+            tft_rst.OpenPin(TFT_RST, PinMode.Output);
+
+            tft_cs_display = new GpioController();
+            tft_cs_display.OpenPin(TFT_CS_DISPLAY, PinMode.Output);
+
+            tft_cs_touch = new GpioController();
+            tft_cs_touch.OpenPin(TFT_CS_TOUCH, PinMode.Output);
+
             tft_dc = new GpioController();
-            tft_dc.OpenPin(24, PinMode.Output);
-            tft_dc.Write(dc_pin, PinValue.Low);
+            tft_dc.OpenPin(TFT_DC, PinMode.Output);
+
+            tft_dc.Write(TFT_DC, PinValue.Low);
             command = true;
+
+            display = false;
+            select_display();
         }
 
         public void write_reg(ST7735Command cmd, byte data)
@@ -121,6 +139,26 @@ namespace TftSpiDemo
             }
         }
 
+        public byte read_byte()
+        {
+            lock (this)
+            {
+                return spi_device.ReadByte();
+            }
+        }
+
+        public byte[] read_data()
+        {
+            lock (this)
+            {
+                var buffer = new byte[1024];
+                Span<byte> data = new Span<byte>(buffer);
+                spi_device.Read(data);
+                
+                return buffer;
+            }
+        }
+
         private void dc_set_low(int delay = 0)
         {
             if (!command)
@@ -130,7 +168,7 @@ namespace TftSpiDemo
                     Thread.Sleep(delay);
                 }
 
-                tft_dc.Write(dc_pin, PinValue.Low);
+                tft_dc.Write(TFT_DC, PinValue.Low);
                 command = true;
             }
         }
@@ -144,8 +182,38 @@ namespace TftSpiDemo
                     Thread.Sleep(delay);
                 }
                 
-                tft_dc.Write(dc_pin, PinValue.High);
+                tft_dc.Write(TFT_DC, PinValue.High);
                 command = false;
+            }
+        }
+
+        public void reset()
+        {
+            tft_rst.Write(TFT_RST, PinValue.High);
+            Thread.Sleep(1);
+            tft_rst.Write(TFT_RST, PinValue.Low);
+            Thread.Sleep(1);
+            tft_rst.Write(TFT_RST, PinValue.High);
+            Thread.Sleep(120);
+        }
+
+        public void select_touch()
+        {
+            if (display)
+            {
+                display = false;
+                tft_cs_display.Write(TFT_CS_DISPLAY, PinValue.High);
+                tft_cs_touch.Write(TFT_CS_TOUCH, PinValue.Low);
+            }
+        }
+
+        public void select_display()
+        {
+            if (!display)
+            {
+                display = true;
+                tft_cs_touch.Write(TFT_CS_TOUCH, PinValue.High);
+                tft_cs_display.Write(TFT_CS_DISPLAY, PinValue.Low);
             }
         }
     }
