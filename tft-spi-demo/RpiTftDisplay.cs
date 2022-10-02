@@ -513,6 +513,15 @@ namespace TftSpiDemo
 
         }
 
+// #if ENABLE_COLOR18
+//         public void draw_char(ushort x, ushort y, byte c, ST7735Color18 color, byte size)
+// #else
+//         public void draw_char(ushort x, ushort y, byte c, ST7735Color color, byte size)
+// #endif
+//         {
+//             draw_char(x, y, c, color, color, size);
+//         }
+
 #if ENABLE_COLOR18
         public void draw_char(ushort x, ushort y, byte c, ST7735Color18 color, ST7735Color18 bg, byte size)
 #else
@@ -538,14 +547,14 @@ namespace TftSpiDemo
                         if (size == 1) draw_pixel((ushort)(x + i), (ushort)(y + j), color);
                         else fill_rectangle((ushort)(x + (i * size)), (ushort)(y + (j * size)), size, size, color);
                     }
-                    else //if (bg != color)
+                    else if (bg != color)
                     {
                         if (size == 1) draw_pixel((ushort)(x + i), (ushort)(y + j), bg);
                         else fill_rectangle((ushort)(x + i * size), (ushort)(y + j * size), size, size, bg);
                     }
                 }
             }
-            //if (bg != color)
+            if (bg != color)
             {
                 // 6th column (space between chars)
                 fill_rectangle((ushort)(x + 5 * size), y, size, (ushort)(7 * size), bg);
@@ -556,6 +565,15 @@ namespace TftSpiDemo
         void set_text_wrap(int w)
         {
             wrap = w;
+        }
+
+#if ENABLE_COLOR18
+        public void draw_text(ushort x, ushort y, string text, ST7735Color18 color, byte size)
+#else
+        public void draw_text(ushort x, ushort y, string text, ST7735Color color, byte size)
+#endif
+        {
+            draw_text(x, y, text, color, color, size);
         }
 
 #if ENABLE_COLOR18
@@ -584,11 +602,12 @@ namespace TftSpiDemo
             
         }
 
-        const int TX_RX_BUF_LENGTH = 3 * 1024;
+        const int TX_RX_BUF_LENGTH = 2 * 1024;
         public void draw_bitmap(ushort x_pos, ushort y_pos, ushort bitmap_width, ushort bitmap_height, byte[] image)
         {
             var i = 0; //bitmap_width * (bitmap_height - 1);
 
+#if true
             set_addr_window(x_pos, y_pos, bitmap_width, bitmap_height);
             var buffer = new byte[TX_RX_BUF_LENGTH];
             var count = 0;
@@ -607,8 +626,8 @@ namespace TftSpiDemo
                     buffer[count++] = image[i]; // red
                     i += 3;
 #else
-                    buffer[count++] = image[i + 1];
                     buffer[count++] = image[i];
+                    buffer[count++] = image[i + 1];
                     i += 2;
 #endif
                 }
@@ -617,6 +636,19 @@ namespace TftSpiDemo
             {
                 rpi_spi.write_data(buffer, count);
             }
+#else
+            for (ushort y = 0; y < bitmap_height; y++)
+            {
+                for (ushort x = 0; x < bitmap_width; x++)
+                {
+                    if (i >= image.Length) break;
+
+                    ushort color = (ushort) ((image[i + 1] << 8) + image[i]);
+                    i += 2;
+                    draw_pixel(x, y, (ST7735Color) color);
+                }
+            }
+#endif
         }
 
         public void set_cursor()
